@@ -1,0 +1,61 @@
+# Created with podman-1.9.3
+#
+# Create the pod by running:
+# $ podman play kube patchwork.yml
+#
+# Before that you need to build the image by running:
+# $ buildah bud -f tools/podman/Dockerfile -t patchwork .
+#
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: patchwork
+  name: patchwork
+spec:
+  containers:
+  - name: web
+    image: localhost/patchwork
+    env:
+    - name: PW_TEST_DB_HOST
+      value: patchwork
+    - name: PROJECT_HOME
+      value: /root/patchwork
+    - name: PW_TEST_DB_PORT
+      value: "3306"
+    ports:
+    - containerPort: 8000
+      hostPort: 8000
+      protocol: TCP
+    securityContext:
+      allowPrivilegeEscalation: true
+      privileged: false
+      readOnlyRootFilesystem: false
+      seLinuxOptions:
+        type: spc_t
+    volumeMounts:
+    - mountPath: /root/patchwork
+      name: root-patchwork
+    workingDir: /root/patchwork
+  - name: db
+    image: docker.io/library/mysql:5.7
+    command:
+    - mysqld
+    env:
+    - name: MYSQL_PASSWORD
+      value: password
+    - name: MYSQL_ROOT_PASSWORD
+      value: password
+    - name: MYSQL_USER
+      value: patchwork
+    securityContext:
+      allowPrivilegeEscalation: true
+      privileged: false
+      readOnlyRootFilesystem: false
+      seLinuxOptions: {}
+    workingDir: /
+  volumes:
+  - hostPath:
+      path: ./
+      type: Directory
+    name: root-patchwork
